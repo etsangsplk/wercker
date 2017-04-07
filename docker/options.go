@@ -25,11 +25,17 @@ import (
 
 // DockerOptions for our docker client
 type Options struct {
-	Host      string
-	TLSVerify string
-	CertPath  string
-	DNS       []string
-	Local     bool
+	Host              string
+	TLSVerify         string
+	CertPath          string
+	DNS               []string
+	Local             bool
+	CPUPeriod         int64
+	CPUQuota          int64
+	Memory            int64
+	MemoryReservation int64
+	MemorySwap        int64
+	KernelMemory      int64
 }
 
 func guessAndUpdateDockerOptions(opts *Options, e *util.Environment) {
@@ -107,13 +113,25 @@ func NewOptions(c util.Settings, e *util.Environment) (*Options, error) {
 	dockerCertPath, _ := c.String("docker-cert-path")
 	dockerDNS, _ := c.StringSlice("docker-dns")
 	dockerLocal, _ := c.Bool("docker-local")
+	dockerCPUPeriod, _ := c.Int("docker-cpu-period")
+	dockerCPUQuota, _ := c.Int("docker-cpu-quota")
+	dockerMemory, _ := c.Int("docker-memory")
+	dockerMemoryReservation, _ := c.Int("docker-memory-reservation")
+	dockerMemorySwap, _ := c.Int("docker-memory-swap")
+	dockerKernelMemory, _ := c.Int("docker-kernel-memory")
 
 	speculativeOptions := &Options{
-		Host:      dockerHost,
-		TLSVerify: dockerTLSVerify,
-		CertPath:  dockerCertPath,
-		DNS:       dockerDNS,
-		Local:     dockerLocal,
+		Host:              dockerHost,
+		TLSVerify:         dockerTLSVerify,
+		CertPath:          dockerCertPath,
+		DNS:               dockerDNS,
+		Local:             dockerLocal,
+		CPUPeriod:         int64(dockerCPUPeriod),
+		CPUQuota:          int64(dockerCPUQuota),
+		Memory:            int64(dockerMemory),
+		MemoryReservation: int64(dockerMemoryReservation),
+		MemorySwap:        int64(dockerMemorySwap),
+		KernelMemory:      int64(dockerKernelMemory),
 	}
 
 	// We're going to try out a few settings and set DockerHost if

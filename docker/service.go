@@ -184,18 +184,36 @@ func (b *InternalServiceBox) Run(ctx context.Context, env *util.Environment, lin
 		hostConfig.Binds = binds
 	}
 
+	conf := &docker.Config{
+		Image:           b.Name,
+		Cmd:             cmd,
+		Env:             myEnv,
+		ExposedPorts:    exposedPorts(b.config.Ports),
+		NetworkDisabled: b.networkDisabled,
+		DNS:             b.dockerOptions.DNS,
+		Entrypoint:      entrypoint,
+	}
+
+	// TODO(termie): terrible hack
+	// Get service count so we can divvy memory
+	serviceCount := ctx.Value("ServiceCount").(int)
+	if b.dockerOptions.Memory != 0 {
+		mem := b.dockerOptions.Memory
+		mem = int64(float64(mem) * 0.25 / float64(serviceCount))
+
+		swap := b.dockerOptions.MemorySwap
+		if swap == 0 {
+			swap = 2 * mem
+		}
+
+		conf.Memory = mem
+		conf.MemorySwap = swap
+	}
+
 	container, err := client.CreateContainer(
 		docker.CreateContainerOptions{
-			Name: b.getContainerName(),
-			Config: &docker.Config{
-				Image:           b.Name,
-				Cmd:             cmd,
-				Env:             myEnv,
-				ExposedPorts:    exposedPorts(b.config.Ports),
-				NetworkDisabled: b.networkDisabled,
-				DNS:             b.dockerOptions.DNS,
-				Entrypoint:      entrypoint,
-			},
+			Name:       b.getContainerName(),
+			Config:     conf,
 			HostConfig: hostConfig,
 		})
 

@@ -209,9 +209,12 @@ func (b *DockerBox) binds(env *util.Environment) ([]string, error) {
 func (b *DockerBox) RunServices(ctx context.Context, env *util.Environment) error {
 	links := []string{}
 
+	// TODO(termie): terrible hack, sorry world
+	ctxWithServiceCount := context.WithValue(ctx, "ServiceCount", len(b.services))
+
 	for _, service := range b.services {
 		b.logger.Debugln("Startinq service:", service.GetName())
-		_, err := service.Run(ctx, env, links)
+		_, err := service.Run(ctxWithServiceCount, env, links)
 		if err != nil {
 			return err
 		}
@@ -388,25 +391,41 @@ func (b *DockerBox) Run(ctx context.Context, env *util.Environment) (*docker.Con
 		DNS:          b.dockerOptions.DNS,
 	}
 
+	conf := &docker.Config{
+		Image:           env.Interpolate(b.Name),
+		Tty:             false,
+		OpenStdin:       true,
+		Cmd:             cmd,
+		Env:             myEnv,
+		AttachStdin:     true,
+		AttachStdout:    true,
+		AttachStderr:    true,
+		ExposedPorts:    ports,
+		NetworkDisabled: b.networkDisabled,
+		DNS:             b.dockerOptions.DNS,
+		Entrypoint:      entrypoint,
+		// Volumes: volumes,
+	}
+
+	if b.dockerOptions.Memory != 0 {
+		mem := b.dockerOptions.Memory
+		if len(b.services) > 0 {
+			mem = int64(float64(mem) * 0.75)
+		}
+		swap := b.dockerOptions.MemorySwap
+		if swap == 0 {
+			swap = 2 * mem
+		}
+
+		conf.Memory = mem
+		conf.MemorySwap = swap
+	}
+
 	// Make and start the container
 	container, err := client.CreateContainer(
 		docker.CreateContainerOptions{
-			Name: b.getContainerName(),
-			Config: &docker.Config{
-				Image:           env.Interpolate(b.Name),
-				Tty:             false,
-				OpenStdin:       true,
-				Cmd:             cmd,
-				Env:             myEnv,
-				AttachStdin:     true,
-				AttachStdout:    true,
-				AttachStderr:    true,
-				ExposedPorts:    ports,
-				NetworkDisabled: b.networkDisabled,
-				DNS:             b.dockerOptions.DNS,
-				Entrypoint:      entrypoint,
-				// Volumes: volumes,
-			},
+			Name:       b.getContainerName(),
+			Config:     conf,
 			HostConfig: hostConfig,
 		})
 
