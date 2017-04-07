@@ -128,10 +128,10 @@ func NewOptions(c util.Settings, e *util.Environment) (*Options, error) {
 		Local:             dockerLocal,
 		CPUPeriod:         int64(dockerCPUPeriod),
 		CPUQuota:          int64(dockerCPUQuota),
-		Memory:            int64(dockerMemory),
-		MemoryReservation: int64(dockerMemoryReservation),
-		MemorySwap:        int64(dockerMemorySwap),
-		KernelMemory:      int64(dockerKernelMemory),
+		Memory:            int64(dockerMemory) * 1024 * 1024,
+		MemoryReservation: int64(dockerMemoryReservation) * 1024 * 1024,
+		MemorySwap:        int64(dockerMemorySwap) * 1024 * 1024,
+		KernelMemory:      int64(dockerKernelMemory) * 1024 * 1024,
 	}
 
 	// We're going to try out a few settings and set DockerHost if
